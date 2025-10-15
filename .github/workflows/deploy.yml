@@ -1,13 +1,3 @@
-## Étape 9 : Créer le workflow GitHub Actions
-
-GitHub Actions permet d'automatiser le processus de déploiement. Chaque fois que vous pushez du code, GitHub Actions va :
-1. Installer les dépendances
-2. Exécuter les tests
-3. Déclencher le déploiement sur Render
-
-**Créez le fichier `.github/workflows/deploy.yml` avec ce contenu** :
-
-```yaml
 # ============================================
 # 🚀 WORKFLOW DE DÉPLOIEMENT AUTOMATIQUE
 # ============================================
@@ -179,6 +169,3 @@ jobs:
 #
 # Si un job échoue, les suivants ne s'exécutent pas (sécurité)
 # ============================================
-```
-
----

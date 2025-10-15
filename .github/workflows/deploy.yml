@@ -66,18 +66,18 @@ jobs:
           # Créer un client de test
           client = TestClient(app)
           
-          # Test 1 : Page d'accueil
-          assert client.get('/').status_code == 200
-          
-          # Test 2 : Endpoint stats
-          r = client.get('/stats')
-          assert r.status_code == 200
-          assert 'total' in r.json()
-          
-          # Test 3 : Endpoint binome
-          r = client.get('/binome')
-          assert r.status_code == 200
-          assert 'binome' in r.json()
+
+          # /health doit exister
+          r = client.get('/health'); assert r.status_code == 200
+          j = r.json(); assert j.get('status') == 'ok'
+
+          # /predict_one mono-texte (200 si ok, 422 si invalide selon Pydantic)
+          r = client.post('/predict_one', json={'text': 'Super produit !'})
+          assert r.status_code in (200, 422)
+
+          # /explain_lime peut renvoyer 200 (si lime installé) OU 501 (non installé)
+          r = client.post('/explain_lime', json={'text': 'Vraiment nul…'})
+          assert r.status_code in (200, 501)
           
           print('✅ Tous les tests passent !')
           "

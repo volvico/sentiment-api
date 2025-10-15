@@ -54,7 +54,7 @@ jobs:
       # Étape 4 : Tester que l'application peut être importée (pas d'erreur de syntaxe)
       - name: ✅ Test import
         run: |
-          python -c "from main import app; print('✅ Import OK')"
+          python -c "from app.api.main import app; print('✅ Import OK')"
       
       # Étape 5 : Tester les endpoints principaux
       - name: 🧪 Test endpoints

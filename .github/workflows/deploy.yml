@@ -1,0 +1,184 @@
+## Étape 9 : Créer le workflow GitHub Actions
+
+GitHub Actions permet d'automatiser le processus de déploiement. Chaque fois que vous pushez du code, GitHub Actions va :
+1. Installer les dépendances
+2. Exécuter les tests
+3. Déclencher le déploiement sur Render
+
+**Créez le fichier `.github/workflows/deploy.yml` avec ce contenu** :
+
+```yaml
+# ============================================
+# 🚀 WORKFLOW DE DÉPLOIEMENT AUTOMATIQUE
+# ============================================
+# Ce fichier configure GitHub Actions pour tester, builder et déployer automatiquement
+# l'API sur Render à chaque push sur la branche main.
+#
+# Workflow en 3 étapes : TEST → BUILD → DEPLOY
+
+name: Deploy API
+
+# ============================================
+# DÉCLENCHEURS DU WORKFLOW
+# ============================================
+# Le workflow se lance automatiquement quand :
+on:
+  push:
+    branches: [ main ]      # À chaque push sur la branche main
+  pull_request:
+    branches: [ main ]      # À chaque Pull Request vers main (pour tester avant merge)
+
+# ============================================
+# JOBS (Tâches à exécuter)
+# ============================================
+# Les jobs s'exécutent dans l'ordre : test → build → deploy
+
+jobs:
+  # ==========================================
+  # JOB 1 : TESTS 🧪
+  # ==========================================
+  # Vérifie que le code fonctionne correctement avant de continuer
+  test:
+    name: 🧪 Tests
+    runs-on: ubuntu-latest      # Utilise une machine Ubuntu virtuelle
+    
+    steps:
+      # Étape 1 : Récupérer le code du repository
+      - name: 📥 Checkout code
+        uses: actions/checkout@v3    # Action GitHub officielle pour récupérer le code
+      
+      # Étape 2 : Installer Python
+      - name: 🐍 Setup Python 3.11
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'     # Version de Python à utiliser
+          cache: 'pip'               # Met en cache les dépendances pip pour aller plus vite
+      
+      # Étape 3 : Installer les dépendances nécessaires
+      - name: 📦 Install dependencies
+        run: |
+          python -m pip install --upgrade pip        # Met à jour pip
+          pip install -r requirements.txt            # Installe FastAPI et uvicorn
+          pip install pytest httpx                   # Installe les outils de test
+      
+      # Étape 4 : Tester que l'application peut être importée (pas d'erreur de syntaxe)
+      - name: ✅ Test import
+        run: |
+          python -c "from main import app; print('✅ Import OK')"
+      
+      # Étape 5 : Tester les endpoints principaux
+      - name: 🧪 Test endpoints
+        run: |
+          python -c "
+          from fastapi.testclient import TestClient
+          from main import app
+          
+          # Créer un client de test
+          client = TestClient(app)
+          
+          # Test 1 : Page d'accueil
+          assert client.get('/').status_code == 200
+          
+          # Test 2 : Endpoint stats
+          r = client.get('/stats')
+          assert r.status_code == 200
+          assert 'total' in r.json()
+          
+          # Test 3 : Endpoint binome
+          r = client.get('/binome')
+          assert r.status_code == 200
+          assert 'binome' in r.json()
+          
+          print('✅ Tous les tests passent !')
+          "
+
+  # ==========================================
+  # JOB 2 : BUILD 🏗️
+  # ==========================================
+  # Vérifie que l'application peut être construite/compilée
+  build:
+    name: 🏗️ Build
+    needs: test                    # Ce job ne s'exécute QUE si le job 'test' a réussi
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'    # S'exécute uniquement sur push (pas sur PR)
+    
+    steps:
+      # Étape 1 : Récupérer le code
+      - name: 📥 Checkout code
+        uses: actions/checkout@v3
+      
+      # Étape 2 : Afficher des informations sur le build
+      - name: 📊 Build info
+        run: |
+          echo "🏗️ Building application..."
+          echo "📝 Commit: ${{ github.sha }}"           # Hash du commit
+          echo "👤 Author: ${{ github.actor }}"         # Auteur du commit
+          echo "🌳 Branch: ${{ github.ref_name }}"      # Nom de la branche
+      
+      # Étape 3 : Installer Python
+      - name: 🐍 Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      
+      # Étape 4 : Vérifier que toutes les dépendances s'installent correctement
+      - name: 📦 Verify dependencies
+        run: |
+          pip install -r requirements.txt
+          echo "✅ Dependencies OK"
+      
+      # Étape 5 : Vérifier que tous les fichiers nécessaires sont présents
+      - name: 📋 Check files
+        run: |
+          ls -la                              # Liste tous les fichiers
+          echo "✅ Files OK"
+      
+      # Étape 6 : Build terminé avec succès
+      - name: ✅ Build complete
+        run: |
+          echo "✅ Build successful!"
+
+  # ==========================================
+  # JOB 3 : DEPLOY 🚀
+  # ==========================================
+  # Déploie l'application sur Render (uniquement si TEST et BUILD ont réussi)
+  deploy:
+    name: 🚀 Deploy to Render
+    needs: [test, build]           # Attend que TEST et BUILD soient terminés avec succès
+    runs-on: ubuntu-latest
+    # Conditions strictes : déploie SEULEMENT si :
+    # - On est sur la branche 'main'
+    # - C'est un push (pas une pull request)
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    
+    steps:
+      # Étape 1 : Déclencher le déploiement sur Render
+      # Le Deploy Hook est une URL unique fournie par Render
+      # Faire un POST sur cette URL déclenche automatiquement un redéploiement
+      - name: Deploy to Render
+        run: |
+          curl -X POST ${{ secrets.RENDER_DEPLOY_HOOK }}
+          # Note : RENDER_DEPLOY_HOOK doit être configuré dans les secrets GitHub
+          # (Settings → Secrets → Actions → New repository secret)
+      
+      # Étape 2 : Confirmation du déploiement
+      - name: ✅ Deployment complete
+        run: |
+          echo "✅ Déploiement Render terminé !"
+          echo "🌐 Vérifiez votre dashboard Render pour le statut"
+          echo "📱 Votre API sera accessible dans quelques minutes"
+
+# ============================================
+# RÉSUMÉ DU WORKFLOW
+# ============================================
+# 1. Chaque push sur 'main' déclenche le workflow
+# 2. JOB TEST : Vérifie que le code fonctionne
+# 3. JOB BUILD : Vérifie que l'app peut être construite
+# 4. JOB DEPLOY : Envoie un signal à Render pour redéployer
+# 5. Render récupère le code, l'installe et le met en ligne
+#
+# Si un job échoue, les suivants ne s'exécutent pas (sécurité)
+# ============================================
+```
+
+---

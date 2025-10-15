@@ -1,0 +1,26 @@
+{
+  "exported_at": "2025-10-15T11:25:47.964200Z",
+  "model_class": "LogisticRegression",
+  "vectorizer_class": "TfidfVectorizer",
+  "vocab_size": 5000,
+  "ngram_range": [
+    1,
+    2
+  ],
+  "max_features": 5000,
+  "min_df": 3,
+  "max_df": 0.85,
+  "preprocess_fn": "preprocess_fn.joblib",
+  "emojis_file": "emojis.json",
+  "stopwords_file": "stopwords.json",
+  "best_f1": [
+    "LogisticRegression",
+    {
+      "accuracy": 0.7620833333333333,
+      "f1": 0.7620668101951524,
+      "roc_auc": 0.8416710069444444
+    }
+  ],
+  "preprocess_fn_name": "preprocess_text",
+  "preprocess_fn_module": "mon_module.package"
+}

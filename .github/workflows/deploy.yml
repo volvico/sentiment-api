@@ -61,7 +61,7 @@ jobs:
         run: |
           python -c "
           from fastapi.testclient import TestClient
-          from main import app
+          from app.api.main import app
           
           # Créer un client de test
           client = TestClient(app)
